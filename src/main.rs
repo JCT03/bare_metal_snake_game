@@ -4,7 +4,7 @@
 use crossbeam::atomic::AtomicCell;
 use pc_keyboard::DecodedKey;
 use pluggable_interrupt_os::{vga_buffer::clear_screen, HandlerTable};
-use pluggable_interrupt_template::LetterMover;
+pub use pluggable_interrupt_template::MainGame;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
@@ -20,7 +20,7 @@ static LAST_KEY: AtomicCell<Option<DecodedKey>> = AtomicCell::new(None);
 static TICKED: AtomicCell<bool> = AtomicCell::new(false);
 
 fn cpu_loop() -> ! {
-    let mut kernel = LetterMover::default();
+    let mut kernel = MainGame::new();
     loop {
         if let Ok(_) = TICKED.compare_exchange(true, false) {
             kernel.tick();

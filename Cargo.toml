@@ -10,6 +10,7 @@ edition = "2021"
 bootloader = "0.9.30"
 pc-keyboard = "0.8.0"
 pluggable_interrupt_os = "0.5.2"
+rand = { version = "0.8.3", features = ["small_rng"], default-features = false }
 
 [dependencies.num]
 version = "0.4.0"
@@ -18,3 +19,4 @@ default-features = false
 [dependencies.crossbeam]
 version = "0.8"
 default-features = false
+
