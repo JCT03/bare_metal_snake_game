@@ -24,10 +24,13 @@ const ARRAY_SIZE: usize = GAME_HEIGHT * BUFFER_WIDTH;
 pub struct SnakeGame<const WIDTH: usize, const HEIGHT: usize> {
     cells: [[Cell; WIDTH]; HEIGHT],
     snake: Snake<WIDTH,HEIGHT>,
+    snake2: Snake<WIDTH,HEIGHT>,
     status: Status,
     last_key: Option<Dir>,
+    last_key2: Option<Dir>,
     countdown: usize,
-    total_ticks: usize
+    total_ticks: usize,
+    two_player: bool
 }
 
 #[derive(Debug,Copy,Clone,Eq,PartialEq)]
@@ -72,9 +75,9 @@ impl From<char> for Dir {
 pub enum Cell {
     Empty,
     Wall,
-    Snake,
     Food,
-    Body
+    Body,
+    Body2
 }
 
 #[derive(Debug,Copy,Clone,Eq,PartialEq)]
@@ -122,14 +125,16 @@ impl <const WIDTH: usize, const HEIGHT: usize> Snake<WIDTH,HEIGHT> {
 pub enum Status {
     Normal,
     Over,
+    Over1,
+    Over2,
     Start
 }
 
-const START: &'static str =
+const START1: &'static str =
     "################################################################################
      #                                                                              #
      #                                                                              #
-     #     >                                                                        #
+     #     v                                                                        #
      #                                                                              #
      #                                                                              #
      #                                                                              #
@@ -150,6 +155,31 @@ const START: &'static str =
      #                                                                              #
      ################################################################################";
 
+     const START2: &'static str =
+    "################################################################################
+     #                                                                              #
+     #                                                                              #
+     #     v                                                                        #
+     #                                                                              #
+     #                                                                              #
+     #                                                                              #
+     #                                                                              #
+     #                                                                              #
+     #                                                                              #
+     #                                                                              #
+     #                                                                        @     #
+     #                                                                              #
+     #                                                                              #
+     #                                                                              #
+     #                                                                              #
+     #                                                                              #
+     #                                                                              #
+     #                                                                              #
+     #     ^                                                                        #
+     #                                                                              #
+     #                                                                              #
+     ################################################################################";
+
 
 pub type MainGame = SnakeGame<BUFFER_WIDTH,GAME_HEIGHT>;
  
@@ -157,14 +187,17 @@ impl <const WIDTH: usize, const HEIGHT: usize> SnakeGame<WIDTH, HEIGHT> {
     pub fn new() -> Self {
         let mut game = SnakeGame {
             cells: [[Cell::Empty; WIDTH]; HEIGHT],
-            snake: Snake::new(Position { col: 0, row: 0}, '>'),
+            snake: Snake::new(Position { col: 0, row: 0}, 'v'),
+            snake2: Snake::new(Position { col: 0, row: 0}, '^'),
             last_key: None,
+            last_key2: None,
             status: Status::Normal,
             countdown: UPDATE_FREQUENCY,
-            total_ticks: 0
+            total_ticks: 0,
+            two_player: true
         };
-        game.reset();
-        game.status = Status::Over;
+        game.reset(true);
+        game.status = Status::Start;
         game
     }
 
@@ -188,33 +221,65 @@ impl <const WIDTH: usize, const HEIGHT: usize> SnakeGame<WIDTH, HEIGHT> {
         match self.status() {
             Status::Normal => self.draw_normal_header(),
             Status::Over => self.draw_game_over_header(),
+            Status::Over1 => self.draw_game_over_header1(),
+            Status::Over2 => self.draw_game_over_header2(),
             Status::Start => self.draw_start_header()
         }
     }
 
     fn draw_start_header(&mut self) {
         let header_color = ColorCode::new(Color::White, Color::Green);
-        let score_text = "Welcome to snake!";
-        plot_str(score_text, 0, 0, header_color);
-        self.draw_subheader("Press 1 to start.");
+        clear_row(0, Color::Green);
+        clear_row(1, Color::Green);
+        let welcome = "Welcome to snake!";
+        plot_str(welcome, 0, 0, header_color);
+        self.draw_subheader("Game over! Press 1 for One-Player Mode and 2 for Two-Player Mode.");
     }
     
     fn draw_normal_header(&mut self) {
         let header_color = ColorCode::new(Color::White, Color::Green);
-        let score_text = "Score:";
         clear_row(0, Color::Green);
         clear_row(1, Color::Green);
-        plot_str(score_text, 0, 0, header_color);
-        plot_num(self.score() as isize, score_text.len() + 1, 0, header_color);
+        if !self.two_player {
+            let score_text = "Score:";
+            plot_str(score_text, 0, 0, header_color);
+            plot_num(self.snake.size as isize, score_text.len() + 1, 0, header_color);
+        }
+        else {
+            let score_text = "Player 1 Size:";
+            plot_str(score_text, 0, 0, header_color);
+            plot_num(self.snake.size as isize, score_text.len() + 1, 0, header_color);
+            let score_text = "Player 2 Size:";
+            plot_str(score_text, WIDTH/2, 0, header_color);
+            plot_num(self.snake2.size as isize, WIDTH/2 + score_text.len() + 1, 0, header_color);
+        }
+
     }
     
     fn draw_subheader(&self, subheader: &str) {
         plot_str(subheader, 0, 1, ColorCode::new(Color::Yellow, Color::Green));
     }
     
+    fn draw_head(&self, header: &str) {
+        let header_color = ColorCode::new(Color::White, Color::Green);
+        clear_row(0, Color::Green);
+        clear_row(1, Color::Green);
+        plot_str(header, 0, 0, header_color);
+    }
+
     fn draw_game_over_header(&mut self) {
         self.draw_normal_header();
-        self.draw_subheader("Game over. Press 1 to restart.");
+        self.draw_subheader("Press 1 for One-Player Mode and 2 for Two-Player Mode.");
+    }
+
+    fn draw_game_over_header1(&mut self) {
+        self.draw_head("Player 1 Wins!");
+        self.draw_subheader("Press 1 for One-Player Mode and 2 for Two-Player Mode.");
+    }
+
+    fn draw_game_over_header2(&mut self) {
+        self.draw_head("Player 2 Wins!");
+        self.draw_subheader("Press 1 for One-Player Mode and 2 for Two-Player Mode.");
     }
     
     fn draw_board(&mut self) {
@@ -227,45 +292,63 @@ impl <const WIDTH: usize, const HEIGHT: usize> SnakeGame<WIDTH, HEIGHT> {
     
     fn get_icon_color(&mut self, p: Position<WIDTH,HEIGHT>, cell: &Cell) -> (char, ColorCode) {
         let (icon, foreground) =
-            if p == self.snake_at() {
+            if p == self.snake.pos {
                 (match self.status() {
                     Status::Over => 'X',
-                    _ => self.snake_icon()
+                    Status::Over2 => 'X',
+                    _ => self.snake.icon()
                 }, Color::Blue)
-            } else {
+            } 
+            else if (p == self.snake2.pos) & self.two_player {
+                (match self.status() {
+                    Status::Over1 => 'X',
+                    _ => self.snake2.icon()
+                }, Color::Magenta)
+            } 
+            else {
                 match cell {
                 Cell::Body => ('o', Color::Blue),
+                Cell::Body2 => ('o', Color::Magenta),
                 Cell::Empty => (' ', Color::Black),
                 Cell::Wall => ('#', Color::Brown),
                 Cell::Food => ('@', Color::Red),
-                Cell::Snake => (self.snake_icon(), Color::Blue)
                 }
             };
         (icon, ColorCode::new(foreground, Color::Green))
     }
 
-    fn reset(&mut self) {
-        for (row, row_chars) in START.split('\n').enumerate() {
-            for (col, icon) in row_chars.trim().chars().enumerate() {
-                self.translate_icon(row, col, icon);
+    fn reset(&mut self, two: bool) {
+        if !two {
+            self.two_player = false;
+            for (row, row_chars) in START1.split('\n').enumerate() {
+                for (col, icon) in row_chars.trim().chars().enumerate() {
+                    self.translate_icon(row, col, icon);
+                }
+            }
+        }
+        else {
+            self.two_player = true;
+            for (row, row_chars) in START2.split('\n').enumerate() {
+                for (col, icon) in row_chars.trim().chars().enumerate() {
+                    self.translate_icon(row, col, icon);
+                }
             }
         }
         self.status = Status::Normal;
         self.last_key = None;
-    }
-
-    pub fn score(&self) -> usize {
-        self.snake.size
+        self.last_key2 = None;
     }
 
     fn translate_icon(&mut self, row: usize, col: usize, icon: char) {
         match icon {
             '#' => self.cells[row][col] = Cell::Wall,
             ' ' => self.cells[row][col] = Cell::Empty,
-            'o' => self.cells[row][col] = Cell::Body,
             '@' => self.cells[row][col] = Cell::Food,
-            '>' |'<' | '^' | 'v' => {
+            '>' | 'v' => {
                 self.snake = Snake::new(Position {row: row as i16, col: col as i16}, icon);
+            },
+            '<' | '^' => {
+                self.snake2 = Snake::new(Position {row: row as i16, col: col as i16}, icon);
             },
             _ =>  panic!("Unrecognized character: '{}'", icon)
         }
@@ -279,31 +362,32 @@ impl <const WIDTH: usize, const HEIGHT: usize> SnakeGame<WIDTH, HEIGHT> {
         RowColIter { row: 0, col: 0 }
     }
 
-    pub fn snake_at(&self) -> Position<WIDTH,HEIGHT> {
-        self.snake.pos
-    }
-
-    pub fn snake_icon(&self) -> char {
-        self.snake.icon()
-    }
-
     pub fn update(&mut self) {
         self.resolve_move();
+        if self.two_player {
+            self.resolve_move2();
+        }
         self.last_key = None;
+        self.last_key2 = None;
     }
 
-    pub fn key(&mut self, key: DecodedKey) {
+    pub fn key(&mut self, dkey: DecodedKey) {
         match self.status {
-            Status::Over => {
-                match key {
-                    DecodedKey::RawKey(KeyCode::Key1) | DecodedKey::Unicode('1') => self.reset(),
-                    _ => {}
+            Status::Normal => {
+                let key = key2dir(dkey);
+                if key.is_some() {
+                    self.last_key = key;
+                }
+                let key = key2dir2(dkey);
+                if key.is_some() {
+                    self.last_key2 = key;
                 }
             }
             _ => {
-                let key = key2dir(key);
-                if key.is_some() {
-                    self.last_key = key;
+                match dkey {
+                    DecodedKey::RawKey(KeyCode::Key1) | DecodedKey::Unicode('1') => self.reset(false),
+                    DecodedKey::RawKey(KeyCode::Key2) | DecodedKey::Unicode('2') => self.reset(true),
+                    _ => {}
                 }
             }
         }
@@ -329,10 +413,14 @@ impl <const WIDTH: usize, const HEIGHT: usize> SnakeGame<WIDTH, HEIGHT> {
         let neighbor = self.snake.pos.neighbor(dir);
         if neighbor.is_legal() {
             let (row, col) = neighbor.row_col();
-            if (self.cells[row][col] == Cell::Body) | (self.cells[row][col] == Cell::Wall) | (self.status == Status::Over) {
-                self.status = Status::Over
+            if (self.cells[row][col] == Cell::Body) | (self.cells[row][col] == Cell::Body2) | (self.cells[row][col] == Cell::Wall) {
+                if self.two_player {
+                    self.status = Status::Over2;
+                } else {   
+                    self.status = Status::Over
+                }
             }
-            else {
+            else if self.status == Status::Normal {
                 self.move_to(neighbor, dir);
             }
         }
@@ -368,6 +456,58 @@ impl <const WIDTH: usize, const HEIGHT: usize> SnakeGame<WIDTH, HEIGHT> {
                 self.update_snake_body(curr_pos, true);
             }
             _ => {self.update_snake_body(curr_pos, false);}
+        }
+    }
+
+    fn resolve_move2(&mut self) {
+        if let Some(dir) = self.last_key2 {
+            if dir != self.snake2.dir.reverse() {
+                self.snake2.dir = dir;
+            }
+        }
+        let dir = self.snake2.dir;
+        let neighbor = self.snake2.pos.neighbor(dir);
+        if neighbor.is_legal() {
+            let (row, col) = neighbor.row_col();
+            if (self.cells[row][col] == Cell::Body) | (self.cells[row][col] == Cell::Body2) | (self.cells[row][col] == Cell::Wall){
+                self.status = Status::Over1
+            }
+            else if self.status == Status::Normal {
+                self.move_to2(neighbor, dir);
+            }
+        }
+    }
+
+    fn update_snake_body2(&mut self, new_body: Position<WIDTH,HEIGHT>, grow:bool) {
+        self.snake2.body[self.snake2.insert_index] = new_body;
+        self.snake2.insert_index += 1;
+        if self.snake2.insert_index == ARRAY_SIZE {
+            self.snake2.insert_index = 0;
+        }
+        if !grow {
+            let cleared_pos = self.snake2.body[self.snake2.remove_index];
+            self.snake2.remove_index += 1;
+            if self.snake2.remove_index == ARRAY_SIZE {
+                self.snake2.remove_index = 0;
+            }
+            self.cells[cleared_pos.row as usize][cleared_pos.col as usize] = Cell::Empty;
+        }
+    }
+
+    fn move_to2(&mut self, neighbor: Position<WIDTH,HEIGHT>, dir: Dir) {
+        let curr_pos = self.snake2.pos;
+        self.cells[curr_pos.row as usize][curr_pos.col as usize] = Cell::Body2;
+        self.snake2.pos = neighbor;
+        self.snake2.dir = dir;
+        let (row, col) = neighbor.row_col();
+        match self.cells[row][col] {
+            Cell::Food => {
+                self.cells[row][col] = Cell::Empty;
+                self.snake2.size += 1;
+                self.new_food();
+                self.update_snake_body2(curr_pos, true);
+            }
+            _ => {self.update_snake_body2(curr_pos, false);}
         }
     }
 
@@ -410,7 +550,7 @@ impl <const WIDTH: usize, const HEIGHT: usize> Iterator for RowColIter<WIDTH,HEI
     }
 }
 
-fn key2dir(key: DecodedKey) -> Option<Dir> {
+fn key2dir2(key: DecodedKey) -> Option<Dir> {
     match key {
         DecodedKey::RawKey(k) => match k {
             KeyCode::ArrowUp => Some(Dir::N),
@@ -419,6 +559,13 @@ fn key2dir(key: DecodedKey) -> Option<Dir> {
             KeyCode::ArrowRight => Some(Dir::E),
             _ => None
         }
+        DecodedKey::Unicode(_) => None
+    }
+}
+
+fn key2dir(key: DecodedKey) -> Option<Dir> {
+    match key {
+        DecodedKey::RawKey(_) => None,
         DecodedKey::Unicode(c) => match c {
             'w' => Some(Dir::N),
             'a' => Some(Dir::W),
