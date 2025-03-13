@@ -233,11 +233,11 @@ impl <const WIDTH: usize, const HEIGHT: usize> SnakeGame<WIDTH, HEIGHT> {
         clear_row(1, Color::Green);
         let welcome = "Welcome to snake!";
         plot_str(welcome, 0, 0, header_color);
-        self.draw_subheader("Game over! Press 1 for One-Player Mode and 2 for Two-Player Mode.");
+        self.draw_subheader("Press 1 for One-Player Mode and 2 for Two-Player Mode.");
     }
     
     fn draw_normal_header(&mut self) {
-        let header_color = ColorCode::new(Color::White, Color::Green);
+        let mut header_color = ColorCode::new(Color::Blue, Color::Green);
         clear_row(0, Color::Green);
         clear_row(1, Color::Green);
         if !self.two_player {
@@ -250,6 +250,7 @@ impl <const WIDTH: usize, const HEIGHT: usize> SnakeGame<WIDTH, HEIGHT> {
             plot_str(score_text, 0, 0, header_color);
             plot_num(self.snake.size as isize, score_text.len() + 1, 0, header_color);
             let score_text = "Player 2 Size:";
+            header_color = ColorCode::new(Color::Magenta, Color::Green);
             plot_str(score_text, WIDTH/2, 0, header_color);
             plot_num(self.snake2.size as isize, WIDTH/2 + score_text.len() + 1, 0, header_color);
         }
@@ -260,8 +261,8 @@ impl <const WIDTH: usize, const HEIGHT: usize> SnakeGame<WIDTH, HEIGHT> {
         plot_str(subheader, 0, 1, ColorCode::new(Color::Yellow, Color::Green));
     }
     
-    fn draw_head(&self, header: &str) {
-        let header_color = ColorCode::new(Color::White, Color::Green);
+    fn draw_head(&self, header: &str, color: Color) {
+        let header_color = ColorCode::new(color, Color::Green);
         clear_row(0, Color::Green);
         clear_row(1, Color::Green);
         plot_str(header, 0, 0, header_color);
@@ -273,12 +274,12 @@ impl <const WIDTH: usize, const HEIGHT: usize> SnakeGame<WIDTH, HEIGHT> {
     }
 
     fn draw_game_over_header1(&mut self) {
-        self.draw_head("Player 1 Wins!");
+        self.draw_head("Player 1 Wins!", Color::Blue);
         self.draw_subheader("Press 1 for One-Player Mode and 2 for Two-Player Mode.");
     }
 
     fn draw_game_over_header2(&mut self) {
-        self.draw_head("Player 2 Wins!");
+        self.draw_head("Player 2 Wins!", Color::Magenta);
         self.draw_subheader("Press 1 for One-Player Mode and 2 for Two-Player Mode.");
     }
     
